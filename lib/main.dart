@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math';
 
 void main() {
   runApp(const MyApp());
@@ -24,7 +25,7 @@ class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   final List<Map<String, String>> receitas = const [
-    {
+   {
       'imagem': 'https://img.band.uol.com.br/image/2023/11/24/penne-a-bolonhesa-de-linguica-toscana-13659.png',
       'nome': 'Macarrão à Bolonhesa',
       'descricao': 'Uma deliciosa receita italiana com molho de carne.',
@@ -98,34 +99,43 @@ class HomeScreen extends StatelessWidget {
               itemCount: receitas.length,
               itemBuilder: (context, index) {
                 final receita = receitas[index];
-                return Card(
-                  elevation: 4,
-                  margin: const EdgeInsets.symmetric(vertical: 10),
-                  color: Colors.orange.shade50,
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(10),
-                    leading: ClipRRect(
-                      borderRadius: BorderRadius.circular(8.0),
-                      child: Image.network(
-                        receita['imagem']!,
-                        width: 80,
-                        height: 80,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    title: Text(
-                      receita['nome']!,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepOrange),
-                    ),
-                    subtitle: Text(receita['descricao']!),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => DetalhesScreen(receita: receita),
+                return AnimatedListItem(
+                  child: Card(
+                    elevation: 4,
+                    margin: const EdgeInsets.symmetric(vertical: 10),
+                    color: Colors.orange.shade50,
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(10),
+                      leading: ClipRRect(
+                        borderRadius: BorderRadius.circular(8.0),
+                        child: Image.network(
+                          receita['imagem']!,
+                          width: 80,
+                          height: 80,
+                          fit: BoxFit.cover,
                         ),
-                      );
-                    },
+                      ),
+                      title: Text(
+                        receita['nome']!,
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepOrange),
+                      ),
+                      subtitle: Text(receita['descricao']!),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          PageRouteBuilder(
+                            transitionDuration: const Duration(milliseconds: 500),
+                            pageBuilder: (_, __, ___) => DetalhesScreen(receita: receita),
+                            transitionsBuilder: (_, animation, __, child) {
+                              return ScaleTransition(
+                                scale: animation,
+                                child: child,
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 );
               },
@@ -137,16 +147,82 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-class DetalhesScreen extends StatelessWidget {
+class AnimatedListItem extends StatefulWidget {
+  final Widget child;
+
+  const AnimatedListItem({super.key, required this.child});
+
+  @override
+  _AnimatedListItemState createState() => _AnimatedListItemState();
+}
+
+class _AnimatedListItemState extends State<AnimatedListItem> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut,
+      ),
+    );
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizeTransition(
+      sizeFactor: _animation,
+      child: widget.child,
+    );
+  }
+}
+
+class DetalhesScreen extends StatefulWidget {
   final Map<String, String> receita;
 
   const DetalhesScreen({super.key, required this.receita});
 
   @override
+  _DetalhesScreenState createState() => _DetalhesScreenState();
+}
+
+class _DetalhesScreenState extends State<DetalhesScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _rotateController;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotateController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _rotateController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(receita['nome']!),
+        title: Text(widget.receita['nome']!),
         backgroundColor: Colors.deepOrange,
       ),
       body: Padding(
@@ -157,7 +233,7 @@ class DetalhesScreen extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(10.0),
               child: Image.network(
-                receita['imagem']!,
+                widget.receita['imagem']!,
                 width: double.infinity,
                 height: 400,
                 fit: BoxFit.cover,
@@ -165,15 +241,29 @@ class DetalhesScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              receita['nome']!,
+              widget.receita['nome']!,
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.deepOrange),
             ),
             const SizedBox(height: 8),
             Text(
-              receita['descricao']!,
+              widget.receita['descricao']!,
               style: const TextStyle(fontSize: 16),
             ),
           ],
+        ),
+      ),
+      floatingActionButton: AnimatedBuilder(
+        animation: _rotateController,
+        builder: (_, child) {
+          return Transform.rotate(
+            angle: _rotateController.value * 2 * pi,
+            child: child,
+          );
+        },
+        child: FloatingActionButton(
+          onPressed: () {},
+          backgroundColor: Colors.deepOrange,
+          child: const Icon(Icons.favorite),
         ),
       ),
     );
